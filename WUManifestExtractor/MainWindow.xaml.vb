@@ -279,137 +279,142 @@ Class MainWindow
                 End Try
             Next
 
-            Dim RegistryKeysNode As XmlNode = UpdateInfoFile.SelectSingleNode("/ns:assembly/ns:registryKeys", nsMgr)
-            AddMessage("正在定位注册表信息节点""/assembly/registryKeys""。")
-            If Not IsNothing(RegistryKeysNode) Then
-                AddMessage("注册表信息节点""/assembly/registryKeys""定位成功，共有 " & RegistryKeysNode.ChildNodes.Count & " 条记录。")
-                Dim RegistryKeyList As XmlNodeList = RegistryKeysNode.ChildNodes
+            Dim RegistryKeysNodeTest As XmlNode = UpdateInfoFile.SelectSingleNode("/ns:assembly/ns:registryKeys", nsMgr)
+            AddMessage("正在检查 Manifest 文件是否包含注册表信息。")
+            If Not IsNothing(RegistryKeysNodeTest) Then
+                AddMessage("已找到注册表信息节点。")
                 AddMessage("正在创建注册表文件""" & OutputDiectory & ManifestFileName & ".reg""。")
                 Try
                     Dim OutputFileStream As New IO.StreamWriter(OutputDiectory & ManifestFileName & ".reg", False)
                     OutputFileStream.WriteLine("Windows Registry Editor Version 5.00")
                     OutputFileStream.WriteLine()
                     AddMessage("已成功创建注册表文件""" & OutputDiectory & ManifestFileName & ".reg""。")
-                    For Each RegistryKeyNode As XmlNode In RegistryKeyList
-                        If RegistryKeyNode.Name <> "registryKey" Then
-                            AddMessage("已忽略一个节点，因为它的类型是""" & RegistryKeyNode.Name & """而不是""registryKey""。")
+                    For Each RegistryKeysNode As XmlNode In AssemblyNode
+                        If RegistryKeysNode.Name <> "registryKeys" Then
                             Continue For
                         End If
-                        Dim RegistryValueList As XmlNodeList = RegistryKeyNode.ChildNodes
-                        AddMessage("已读取到注册表键信息""" & RegistryKeyNode.Attributes("keyName").Value & """。")
-                        Try
-                            OutputFileStream.WriteLine("[" & RegistryKeyNode.Attributes("keyName").Value & "]")
-                        Catch ex As Exception
-                            AddMessage("已忽略注册表键结点""" & RegistryKeyNode.Attributes("keyName").Value & """，因为发生错误: " & ex.Message)
-                            Continue For
-                        End Try
-                        Dim RegistryValueInfo As New WindowsUpdatePackageRegistryValueNoteProperties
-                        For Each RegistryValueNode As XmlElement In RegistryValueList
-                            If RegistryValueNode.Name <> "registryValue" Then
-                                AddMessage("已忽略一个节点，因为它的类型是""" & RegistryValueNode.Name & """而不是""registryValue""。")
+                        Dim RegistryKeyList As XmlNodeList = RegistryKeysNode.ChildNodes
+                        For Each RegistryKeyNode As XmlNode In RegistryKeyList
+                            If RegistryKeyNode.Name <> "registryKey" Then
+                                AddMessage("已忽略一个节点，因为它的类型是""" & RegistryKeyNode.Name & """而不是""registryKey""。")
                                 Continue For
                             End If
-                            With RegistryValueInfo
-                                .Name = RegistryValueNode.GetAttribute("name")
-                                .Value = RegistryValueNode.GetAttribute("value")
-                                .ValueType = RegistryValueNode.GetAttribute("valueType")
-                            End With
-                            AddMessage("已读取到类型为 " & RegistryValueInfo.ValueType & " 的注册表值。")
+                            Dim RegistryValueList As XmlNodeList = RegistryKeyNode.ChildNodes
+                            AddMessage("已读取到注册表键信息""" & RegistryKeyNode.Attributes("keyName").Value & """。")
                             Try
-                                With RegistryValueInfo
-                                    Select Case .ValueType.ToUpper()
-                                        Case "REG_NONE" 'hex(0)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(0):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(0):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case "REG_SZ" 'hex(1)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=""" & ManifestRegistryStringValueToRegFileStringValue(.Value) & """")
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=""" & ManifestRegistryStringValueToRegFileStringValue(.Value) & """")
-                                            End If
-                                        Case "REG_EXPAND_SZ" 'hex(2)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=" & ManifestRegistryExpendableStringValueToRegFileExpendableStringValue(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryExpendableStringValueToRegFileExpendableStringValue(.Value))
-                                            End If
-                                        Case "REG_DWORD_LITTLE_ENDIAN" 'hex(3)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=dword:" & .Value.Substring(2, 8))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=dword:" & .Value.Substring(2, 8))
-                                            End If
-                                        Case "REG_DWORD" 'hex(3)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=dword:" & .Value.Substring(2, 8))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=dword:" & .Value.Substring(2, 8))
-                                            End If
-                                        Case "REG_DWORD_BIG_ENDIAN" 'hex(4)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(5):" & SplitContinuousBinaryStirng(.Value.Substring(2, 8)))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(5):" & SplitContinuousBinaryStirng(.Value.Substring(2, 8)))
-                                            End If
-                                        Case "REG_BINARY" 'hex(5)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=" & ManifestRegistryBinaryValueToRegFileBinaryValue(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryBinaryValueToRegFileBinaryValue(.Value))
-                                            End If
-                                        Case "REG_LINK" 'hex(6)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(6):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(6):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case "REG_MULTI_SZ" 'hex(7)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=" & ManifestRegistryMultiStringValueToRegFileMultiStringValue(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryMultiStringValueToRegFileMultiStringValue(.Value))
-                                            End If
-                                        Case "REG_RESOURCE_LIST" 'hex(8)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(8):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(8):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case "REG_FULL_RESOURCE_DESCRIPTOR" 'hex(9)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(9):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(9):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case "REG_RESOURCE_REQUIREMENT_LIST" 'hex(10)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(10):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(10):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case "REG_QWORD" 'hex(b)
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(b):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(b):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                        Case Else 'hex(0), use REG_NONE
-                                            If .Name = "" Then
-                                                OutputFileStream.WriteLine("@=hex(0):" & SplitContinuousBinaryStirng(.Value))
-                                            Else
-                                                OutputFileStream.WriteLine("""" & .Name & """=hex(0):" & SplitContinuousBinaryStirng(.Value))
-                                            End If
-                                    End Select
-                                End With
+                                OutputFileStream.WriteLine("[" & RegistryKeyNode.Attributes("keyName").Value & "]")
                             Catch ex As Exception
-                                AddMessage("已忽略一个注册表值节点，因为发生错误: " & ex.Message)
+                                AddMessage("已忽略注册表键结点""" & RegistryKeyNode.Attributes("keyName").Value & """，因为发生错误: " & ex.Message)
                                 Continue For
                             End Try
+                            Dim RegistryValueInfo As New WindowsUpdatePackageRegistryValueNoteProperties
+                            For Each RegistryValueNode As XmlElement In RegistryValueList
+                                If RegistryValueNode.Name <> "registryValue" Then
+                                    AddMessage("已忽略一个节点，因为它的类型是""" & RegistryValueNode.Name & """而不是""registryValue""。")
+                                    Continue For
+                                End If
+                                With RegistryValueInfo
+                                    .Name = RegistryValueNode.GetAttribute("name")
+                                    .Value = RegistryValueNode.GetAttribute("value")
+                                    .ValueType = RegistryValueNode.GetAttribute("valueType")
+                                End With
+                                AddMessage("已读取到类型为 " & RegistryValueInfo.ValueType & " 的注册表值。")
+                                Try
+                                    With RegistryValueInfo
+                                        Select Case .ValueType.ToUpper()
+                                            Case "REG_NONE" 'hex(0)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(0):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(0):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case "REG_SZ" 'hex(1)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=""" & ManifestRegistryStringValueToRegFileStringValue(.Value) & """")
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=""" & ManifestRegistryStringValueToRegFileStringValue(.Value) & """")
+                                                End If
+                                            Case "REG_EXPAND_SZ" 'hex(2)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=" & ManifestRegistryExpendableStringValueToRegFileExpendableStringValue(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryExpendableStringValueToRegFileExpendableStringValue(.Value))
+                                                End If
+                                            Case "REG_DWORD_LITTLE_ENDIAN" 'hex(3)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=dword:" & .Value.Substring(2, 8))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=dword:" & .Value.Substring(2, 8))
+                                                End If
+                                            Case "REG_DWORD" 'hex(3)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=dword:" & .Value.Substring(2, 8))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=dword:" & .Value.Substring(2, 8))
+                                                End If
+                                            Case "REG_DWORD_BIG_ENDIAN" 'hex(4)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(5):" & SplitContinuousBinaryStirng(.Value.Substring(2, 8)))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(5):" & SplitContinuousBinaryStirng(.Value.Substring(2, 8)))
+                                                End If
+                                            Case "REG_BINARY" 'hex(5)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=" & ManifestRegistryBinaryValueToRegFileBinaryValue(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryBinaryValueToRegFileBinaryValue(.Value))
+                                                End If
+                                            Case "REG_LINK" 'hex(6)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(6):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(6):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case "REG_MULTI_SZ" 'hex(7)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=" & ManifestRegistryMultiStringValueToRegFileMultiStringValue(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=" & ManifestRegistryMultiStringValueToRegFileMultiStringValue(.Value))
+                                                End If
+                                            Case "REG_RESOURCE_LIST" 'hex(8)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(8):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(8):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case "REG_FULL_RESOURCE_DESCRIPTOR" 'hex(9)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(9):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(9):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case "REG_RESOURCE_REQUIREMENT_LIST" 'hex(10)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(10):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(10):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case "REG_QWORD" 'hex(b)
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(b):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(b):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                            Case Else 'use hex(ValueType.ToLower())
+                                                If .Name = "" Then
+                                                    OutputFileStream.WriteLine("@=hex(" & .ValueType.ToLower() & "):" & SplitContinuousBinaryStirng(.Value))
+                                                Else
+                                                    OutputFileStream.WriteLine("""" & .Name & """=hex(" & .ValueType.ToLower() & "):" & SplitContinuousBinaryStirng(.Value))
+                                                End If
+                                        End Select
+                                    End With
+                                Catch ex As Exception
+                                    AddMessage("已忽略一个注册表值节点，因为发生错误: " & ex.Message)
+                                    Continue For
+                                End Try
+                            Next
+                            OutputFileStream.WriteLine()
                         Next
-                        OutputFileStream.WriteLine()
                     Next
                     OutputFileStream.Flush()
                     OutputFileStream.Close()
