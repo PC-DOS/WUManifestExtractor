@@ -2,7 +2,8 @@
     Public Function SplitContinuousBinaryStirng(ByVal BinaryString As String, Optional AddZeroAtLast As Boolean = False, Optional SeparateCharacter As String = ",") As String
         Dim SplittedBinaryString As String = ""
         If BinaryString.Length = 0 Then
-            BinaryString = "00"
+            SplittedBinaryString = ""
+            Return SplittedBinaryString
         End If
         If BinaryString.Length Mod 2 = 1 Then
             If AddZeroAtLast Then
@@ -19,11 +20,11 @@
         Next
         Return SplittedBinaryString
     End Function
-    Public Function StringToRegistryStringValue(ByVal StringValue As String) As String
+    Public Function StringToRegistryStringBinaryValue(ByVal StringValue As String) As String
         Dim RegSzVal As String = ""
         Dim CharTemp As String
         If StringValue.Length = 0 Then
-            RegSzVal = "00"
+            RegSzVal = ""
         Else
             For iIndex = 0 To StringValue.Length - 1
                 CharTemp = Convert.ToString(AscW(StringValue(iIndex)), 16)
@@ -41,7 +42,7 @@
         Dim RegExpandSzVal As String = "hex(2):"
         Dim CharTemp As String
         If ManifestRegistryExpendableStringValue.Length = 0 Then
-            RegExpandSzVal = RegExpandSzVal & "00"
+            RegExpandSzVal = RegExpandSzVal & "00,00"
         Else
             For iIndex = 0 To ManifestRegistryExpendableStringValue.Length - 1
                 CharTemp = Convert.ToString(AscW(ManifestRegistryExpendableStringValue(iIndex)), 16)
@@ -60,7 +61,7 @@
         Dim CharTemp As String
         Dim IsSingleLineEnded As Boolean = True
         If ManifestRegistryMultiStringValue.Length = 0 Then
-            RegMultiSzVal = RegMultiSzVal & "00,00,00,00"
+            RegMultiSzVal = RegMultiSzVal & "00,00"
         Else
             For iIndex = 0 To ManifestRegistryMultiStringValue.Length - 1
                 If ManifestRegistryMultiStringValue(iIndex) = """" Then
@@ -97,7 +98,7 @@
     Public Function ManifestRegistryBinaryValueToRegFileBinaryValue(ByVal ManifestRegistryBinaryValue As String) As String
         Dim RegBinVal As String = "hex:"
         If ManifestRegistryBinaryValue.Length = 0 Then
-            RegBinVal = "hex:00"
+            RegBinVal = "hex:"
         Else
             If ManifestRegistryBinaryValue.Length Mod 2 = 1 Then
                 ManifestRegistryBinaryValue = "0" & ManifestRegistryBinaryValue
