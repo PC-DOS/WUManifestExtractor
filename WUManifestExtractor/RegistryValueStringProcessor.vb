@@ -58,24 +58,31 @@
     End Function
     Public Function ManifestRegistryMultiStringValueToRegFileMultiStringValue(ByVal ManifestRegistryMultiStringValue As String)
         Dim RegMultiSzVal As String = "hex(7):"
-        Dim CharTemp As String
         Dim IsSingleLineEnded As Boolean = True
         If ManifestRegistryMultiStringValue.Length = 0 Then
             RegMultiSzVal = RegMultiSzVal & "00,00"
         Else
-            For iIndex = 0 To ManifestRegistryMultiStringValue.Length - 1
-                If ManifestRegistryMultiStringValue(iIndex) = """" Then
-                    IsSingleLineEnded = Not IsSingleLineEnded
-                    If IsSingleLineEnded Then
-                        RegMultiSzVal = RegMultiSzVal & "00,00,"
-                    End If
+            ManifestRegistryMultiStringValue = ManifestRegistryMultiStringValue.Replace("""""", vbLf)
+            Dim ArrayRegSz() As String = ManifestRegistryMultiStringValue.Split(vbLf)
+            If ArrayRegSz(0).StartsWith("""") Then
+                If ArrayRegSz(0).Length <= 1 Then
+                    ArrayRegSz(0) = ""
                 Else
-                    CharTemp = Convert.ToString(AscW(ManifestRegistryMultiStringValue(iIndex)), 16)
-                    If CharTemp.Length = 2 Then
-                        RegMultiSzVal = RegMultiSzVal & CharTemp & ",00,"
-                    Else
-                        RegMultiSzVal = RegMultiSzVal & CharTemp.Substring(2, 2) & "," & CharTemp.Substring(0, 2) & ","
-                    End If
+                    ArrayRegSz(0) = ArrayRegSz(0).Substring(1)
+                End If
+            End If
+            If ArrayRegSz(ArrayRegSz.Length - 1).EndsWith("""") Then
+                If ArrayRegSz(ArrayRegSz.Length - 1).Length <= 1 Then
+                    ArrayRegSz(ArrayRegSz.Length - 1) = ""
+                Else
+                    ArrayRegSz(ArrayRegSz.Length - 1) = ArrayRegSz(ArrayRegSz.Length - 1).Substring(0, ArrayRegSz(ArrayRegSz.Length - 1).Length - 1)
+                End If
+            End If
+            For iStrIndex = 0 To ArrayRegSz.Length - 1
+                If ArrayRegSz(iStrIndex).Length = 0 Then
+                    RegMultiSzVal = RegMultiSzVal & StringToRegistryStringBinaryValue(ArrayRegSz(iStrIndex)) & "00,00,"
+                Else
+                    RegMultiSzVal = RegMultiSzVal & StringToRegistryStringBinaryValue(ArrayRegSz(iStrIndex)) & ",00,00,"
                 End If
             Next
             RegMultiSzVal = RegMultiSzVal & "00,00"
