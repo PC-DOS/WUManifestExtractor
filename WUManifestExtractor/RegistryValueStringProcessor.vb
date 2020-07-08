@@ -90,16 +90,16 @@
         Return RegMultiSzVal
     End Function
     Public Function ManifestRegistryStringValueCheck(ByVal ManifestStringValue As String) As String
-        Dim RegSzVal As String = ManifestStringValue.Replace("\\", "\")
-        RegSzVal = RegSzVal.Replace("\""", """")
-        RegSzVal = RegSzVal.Replace("""", "\""")
+        Dim RegSzVal As String = ManifestStringValue.Replace("\""", """")
+        RegSzVal = RegSzVal.Replace("\\", "\")
         RegSzVal = RegSzVal.Replace("\", "\\")
+        RegSzVal = RegSzVal.Replace("""", "\""")
         Return RegSzVal
     End Function
     Public Function ManifestRegistryStringValueToRegFileStringValue(ByVal ManifestStringValue As String) As String
         Dim RegSzVal As String = ManifestStringValue
-        RegSzVal = RegSzVal.Replace("""", "\""")
         RegSzVal = RegSzVal.Replace("\", "\\")
+        RegSzVal = RegSzVal.Replace("""", "\""")
         Return RegSzVal
     End Function
     Public Function ManifestRegistryBinaryValueToRegFileBinaryValue(ByVal ManifestRegistryBinaryValue As String) As String
